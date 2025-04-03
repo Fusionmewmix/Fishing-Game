@@ -3,90 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Main Menu</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <title>Fishing Game - Main Menu</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body { margin: 0; overflow: hidden; }
     </style>
 </head>
 <body>
-    <script>
-        class MainMenu extends Phaser.Scene {
-            constructor() {
-                super({ key: 'MainMenu' });
-            }
 
-            preload() {
-                this.load.image('background', 'assets/underwater.png');
-                this.load.image('bubble', 'assets/bubble.png');
-                this.load.spritesheet('fish', 'assets/fish.png', { frameWidth: 64, frameHeight: 32 });
-            }
+<script>
+    const config = {
+        type: Phaser.AUTO,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scene: {
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
 
-            create() {
-                this.add.image(400, 300, 'background').setScale(1.5);
-                
-                // Animated fish
-                this.anims.create({
-                    key: 'swim',
-                    frames: this.anims.generateFrameNumbers('fish', { start: 0, end: 3 }),
-                    frameRate: 6,
-                    repeat: -1
-                });
-                let fish = this.add.sprite(100, 200, 'fish').setScale(2);
-                fish.play('swim');
-                this.tweens.add({ targets: fish, x: 700, duration: 5000, yoyo: true, repeat: -1 });
+    let startButton, volumeText, character;
+    let gameStarted = false;
+    let cameraMoving = false;
+    let cameraSpeed = 2;
 
-                // Moving bubbles
-                this.time.addEvent({
-                    delay: 500,
-                    callback: () => {
-                        let bubble = this.add.image(Phaser.Math.Between(50, 750), 600, 'bubble');
-                        this.tweens.add({ targets: bubble, y: 0, duration: 4000, onComplete: () => bubble.destroy() });
-                    },
-                    loop: true
-                });
+    const game = new Phaser.Game(config);
 
-                // Start game button
-                let startButton = this.add.text(300, 350, 'Start Game', {
-                    fontSize: '32px',
-                    fill: '#fff',
-                    backgroundColor: '#000',
-                    padding: { x: 10, y: 5 }
-                }).setInteractive();
-                startButton.on('pointerdown', () => this.startGame());
-                
-                // Volume slider
-                let volumeSlider = this.add.rectangle(100, 550, 150, 10, 0xffffff).setInteractive();
-                let volumeHandle = this.add.circle(100, 550, 8, 0xff0000).setInteractive();
-                this.input.setDraggable(volumeHandle);
-                this.input.on('drag', (pointer, gameObject, dragX) => {
-                    if (dragX >= 50 && dragX <= 175) {
-                        gameObject.x = dragX;
-                        let volume = (dragX - 50) / 125;
-                        this.sound.setVolume(volume);
-                    }
-                });
-            }
+    function preload() {
+        // No assets needed for now, just using colors and text
+    }
 
-            startGame() {
-                this.tweens.add({
-                    targets: this.cameras.main,
-                    scrollY: -600,
-                    duration: 2000,
-                    onComplete: () => this.scene.start('GameScene')
-                });
-            }
+    function create() {
+        // Set background to underwater color
+        this.cameras.main.setBackgroundColor("#1E3A5F");
+
+        // Add placeholder "bubbles" (moving circles)
+        this.bubbles = this.add.group();
+        for (let i = 0; i < 10; i++) {
+            let bubble = this.add.circle(
+                Phaser.Math.Between(0, config.width), 
+                Phaser.Math.Between(config.height, config.height + 200), 
+                Phaser.Math.Between(5, 15), 
+                0xffffff
+            );
+            this.bubbles.add(bubble);
         }
 
-        const config = {
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            scene: [MainMenu]
-        };
+        // Start Button
+        startButton = this.add.text(config.width / 2, config.height / 2, "Start Game", {
+            fontSize: "32px",
+            fill: "#FFFFFF",
+            backgroundColor: "#000000",
+            padding: { left: 10, right: 10, top: 5, bottom: 5 }
+        }).setOrigin(0.5).setInteractive();
 
-        const game = new Phaser.Game(config);
-    </script>
+        startButton.on("pointerdown", () => {
+            cameraMoving = true;
+            startButton.setVisible(false);
+            volumeText.setVisible(false);
+        });
+
+        // Volume slider text
+        volumeText = this.add.text(20, config.height - 50, "Volume: [========]", {
+            fontSize: "20px",
+            fill: "#FFFFFF"
+        });
+
+        // Placeholder character (rectangle)
+        character = this.add.rectangle(config.width / 2, config.height + 100, 50, 100, 0xff0000);
+    }
+
+    function update() {
+        // Move bubbles upwards
+        this.bubbles.children.iterate(bubble => {
+            bubble.y -= 1;
+            if (bubble.y < -10) {
+                bubble.y = config.height + 10;
+                bubble.x = Phaser.Math.Between(0, config.width);
+            }
+        });
+
+        // Move camera up when transitioning
+        if (cameraMoving && this.cameras.main.scrollY > -config.height) {
+            this.cameras.main.scrollY -= cameraSpeed;
+            character.y -= cameraSpeed;
+        }
+    }
+</script>
+
 </body>
 </html>
