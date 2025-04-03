@@ -16,26 +16,38 @@
         type: Phaser.AUTO,
         width: window.innerWidth,
         height: window.innerHeight,
-        physics: { default: "arcade" },
+        physics: { default: "arcade", arcade: { gravity: { y: 500 }, debug: false } },
         scene: { preload, create, update }
     };
 
     let startButton, volumeText, character;
     let gameStarted = false;
     let cameraMoving = false;
-    let cameraSpeed = 6;
     let reachedLand = false;
     let cursors;
+    let cameraSpeed = 6;
+    let land;
 
     const game = new Phaser.Game(config);
 
     function preload() {
-        // No assets needed for now, just using colors and text
+        // No assets needed for now
     }
 
     function create() {
         // Set initial underwater background
         this.cameras.main.setBackgroundColor("#1E3A5F");
+
+        // Start camera position underwater
+        this.cameras.main.scrollY = config.height;
+
+        // Add land (positioned above water)
+        land = this.add.rectangle(0, 0, config.width * 2, 200, 0x228B22).setOrigin(0);
+        this.physics.add.existing(land, true); // Static ground
+
+        // Placeholder character (red underwater, pink on land)
+        character = this.physics.add.rectangle(config.width / 2, config.height + 100, 50, 100, 0xff0000);
+        character.body.setCollideWorldBounds(true);
 
         // Add placeholder "bubbles" (moving circles)
         this.bubbles = this.add.group();
@@ -69,22 +81,9 @@
             fill: "#FFFFFF"
         });
 
-        // Placeholder character (red underwater, pink on land)
-        character = this.physics.add.rectangle(config.width / 2, config.height + 100, 50, 100, 0xff0000);
-        character.body.setCollideWorldBounds(true);
-
-        // Add land after the transition
-        this.land = this.add.rectangle(0, -config.height, config.width * 2, 200, 0x228B22).setOrigin(0);
-        this.physics.add.existing(this.land, true); // Make land a static object
-
         // Player controls
-        cursors = this.input.keyboard.addKeys({
-            up: Phaser.Input.Keyboard.KeyCodes.W,
-            left: Phaser.Input.Keyboard.KeyCodes.A,
-            right: Phaser.Input.Keyboard.KeyCodes.D
-        });
-
-        this.physics.add.collider(character, this.land);
+        cursors = this.input.keyboard.createCursorKeys();
+        this.physics.add.collider(character, land);
     }
 
     function update() {
@@ -98,15 +97,15 @@
         });
 
         // Move camera up when transitioning
-        if (cameraMoving && this.cameras.main.scrollY > -config.height) {
+        if (cameraMoving && this.cameras.main.scrollY > 0) {
             this.cameras.main.scrollY -= cameraSpeed;
             character.y -= cameraSpeed;
         }
 
         // Change scene when reaching land
-        if (!reachedLand && this.cameras.main.scrollY <= -config.height) {
+        if (!reachedLand && this.cameras.main.scrollY <= 0) {
             reachedLand = true;
-            this.cameras.main.setBackgroundColor("#87CEEB"); // Change to sky color
+            this.cameras.main.setBackgroundColor("#87CEEB"); // Change to sky
             character.setFillStyle(0xff69b4); // Change character to pink
         }
 
