@@ -16,17 +16,16 @@
         type: Phaser.AUTO,
         width: window.innerWidth,
         height: window.innerHeight,
-        scene: {
-            preload: preload,
-            create: create,
-            update: update
-        }
+        physics: { default: "arcade" },
+        scene: { preload, create, update }
     };
 
     let startButton, volumeText, character;
     let gameStarted = false;
     let cameraMoving = false;
-    let cameraSpeed = 2;
+    let cameraSpeed = 6;
+    let reachedLand = false;
+    let cursors;
 
     const game = new Phaser.Game(config);
 
@@ -35,7 +34,7 @@
     }
 
     function create() {
-        // Set background to underwater color
+        // Set initial underwater background
         this.cameras.main.setBackgroundColor("#1E3A5F");
 
         // Add placeholder "bubbles" (moving circles)
@@ -70,8 +69,22 @@
             fill: "#FFFFFF"
         });
 
-        // Placeholder character (rectangle)
-        character = this.add.rectangle(config.width / 2, config.height + 100, 50, 100, 0xff0000);
+        // Placeholder character (red underwater, pink on land)
+        character = this.physics.add.rectangle(config.width / 2, config.height + 100, 50, 100, 0xff0000);
+        character.body.setCollideWorldBounds(true);
+
+        // Add land after the transition
+        this.land = this.add.rectangle(0, -config.height, config.width * 2, 200, 0x228B22).setOrigin(0);
+        this.physics.add.existing(this.land, true); // Make land a static object
+
+        // Player controls
+        cursors = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D
+        });
+
+        this.physics.add.collider(character, this.land);
     }
 
     function update() {
@@ -88,6 +101,28 @@
         if (cameraMoving && this.cameras.main.scrollY > -config.height) {
             this.cameras.main.scrollY -= cameraSpeed;
             character.y -= cameraSpeed;
+        }
+
+        // Change scene when reaching land
+        if (!reachedLand && this.cameras.main.scrollY <= -config.height) {
+            reachedLand = true;
+            this.cameras.main.setBackgroundColor("#87CEEB"); // Change to sky color
+            character.setFillStyle(0xff69b4); // Change character to pink
+        }
+
+        // WASD Movement on land
+        if (reachedLand) {
+            if (cursors.left.isDown) {
+                character.body.setVelocityX(-200);
+            } else if (cursors.right.isDown) {
+                character.body.setVelocityX(200);
+            } else {
+                character.body.setVelocityX(0);
+            }
+
+            if (cursors.up.isDown && character.body.blocked.down) {
+                character.body.setVelocityY(-300); // Jump
+            }
         }
     }
 </script>
